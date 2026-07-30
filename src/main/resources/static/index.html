@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCI-DSS Credit Card Token Vault</title>
+    <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0B0F19;
+            --card-dark: #161D30;
+            --border-color: #242F4D;
+            --text-primary: #F3F4F6;
+            --text-secondary: #9CA3AF;
+            --primary: #4F46E5;
+            --primary-glow: rgba(79, 70, 229, 0.4);
+            --secondary: #8B5CF6;
+            --secondary-glow: rgba(139, 92, 246, 0.4);
+            --success: #10B981;
+            --success-glow: rgba(16, 185, 129, 0.2);
+            --danger: #EF4444;
+            --danger-glow: rgba(239, 68, 68, 0.2);
+            --warning: #F59E0B;
+            --font-main: 'Plus Jakarta Sans', sans-serif;
+            --font-sub: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(79, 70, 229, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 40%);
+        }
+
+        header {
+            padding: 24px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(11, 15, 25, 0.8);
+            backdrop-filter: blur(12px);
+            z-index: 10;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 20px;
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .logo-text h1 {
+            font-size: 20px;
+            font-weight: 800;
+            background: linear-gradient(to right, #FFFFFF, #D1D5DB);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-text p {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-family: var(--font-sub);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .badge-pci {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 0 10px var(--success-glow);
+        }
+
+        .badge-pci::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background-color: var(--success);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 6px var(--success);
+        }
+
+        main {
+            flex: 1;
+            padding: 40px;
+            max-width: 1300px;
+            width: 100%;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 40px;
+        }
+
+        @media (max-width: 1024px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .vault-card {
+            background-color: var(--card-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: border-color 0.3s ease;
+        }
+
+        .vault-card:hover {
+            border-color: rgba(79, 70, 229, 0.4);
+        }
+
+        .card-header {
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .card-subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-family: var(--font-sub);
+        }
+
+        /* 3D-styled Interactive Credit Card Preview */
+        .credit-card-wrapper {
+            margin-bottom: 30px;
+            perspective: 1000px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .physical-card {
+            width: 360px;
+            height: 220px;
+            background: linear-gradient(135deg, #111827 0%, #1e1b4b 50%, #311042 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            position: relative;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+
+        .physical-card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .physical-card.tokenized {
+            background: linear-gradient(135deg, #064e3b 0%, #022c22 100%);
+            border-color: rgba(16, 185, 129, 0.3);
+            box-shadow: 0 15px 35px rgba(16, 185, 129, 0.15), inset 0 0 15px rgba(16, 185, 129, 0.1);
+        }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 2;
+        }
+
+        .card-chip {
+            width: 48px;
+            height: 38px;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            border-radius: 6px;
+            position: relative;
+            box-shadow: inset 0 1px 2px rgba(255,255,255,0.4);
+        }
+
+        .card-chip::after {
+            content: '';
+            position: absolute;
+            top: 25%;
+            left: 25%;
+            width: 50%;
+            height: 50%;
+            border: 1px solid rgba(0,0,0,0.2);
+            border-radius: 4px;
+        }
+
+        .card-brand-logo {
+            font-size: 24px;
+            font-weight: 800;
+            font-style: italic;
+            letter-spacing: -1px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .card-brand-logo.visa {
+            color: #1E3A8A;
+            background: #FFFFFF;
+            padding: 2px 10px;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .card-brand-logo.mastercard {
+            display: flex;
+            align-items: center;
+        }
+
+        .card-brand-logo.mastercard::before, .card-brand-logo.mastercard::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .card-brand-logo.mastercard::before {
+            background-color: #EA580C;
+            margin-right: -8px;
+        }
+        .card-brand-logo.mastercard::after {
+            background-color: #EAB308;
+            opacity: 0.8;
+        }
+
+        .card-middle {
+            margin: 20px 0;
+            z-index: 2;
+        }
+
+        .card-number-display {
+            font-family: var(--font-mono);
+            font-size: 21px;
+            letter-spacing: 2.5px;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.8);
+            color: #FFFFFF;
+            text-align: center;
+        }
+
+        .card-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            z-index: 2;
+        }
+
+        .card-holder {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .card-label {
+            font-size: 9px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: var(--font-sub);
+        }
+
+        .card-holder-name {
+            font-size: 13px;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .card-expiry {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 2px;
+        }
+
+        .card-expiry-val {
+            font-family: var(--font-mono);
+            font-size: 13px;
+        }
+
+        /* Forms styling */
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-family: var(--font-sub);
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .form-input {
+            width: 100%;
+            background-color: #0E1322;
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 16px;
+            color: #FFFFFF;
+            font-family: var(--font-mono);
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(79, 70, 229, 0.2);
+            background-color: #0B0E18;
+        }
+
+        .input-icon {
+            position: absolute;
+            right: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        /* Validation status indicator */
+        .val-indicator {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+            font-size: 11px;
+            font-family: var(--font-sub);
+        }
+
+        .val-check {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-secondary);
+            transition: color 0.3s ease;
+        }
+
+        .val-check.valid {
+            color: var(--success);
+        }
+
+        .val-check.invalid {
+            color: var(--danger);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #FFFFFF;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 28px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            box-shadow: 0 4px 15px var(--primary-glow);
+            font-family: var(--font-main);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.6);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background: var(--border-color);
+            color: var(--text-secondary);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Token result dashboard */
+        .result-box {
+            margin-top: 24px;
+            background: rgba(79, 70, 229, 0.05);
+            border: 1px dashed var(--primary);
+            border-radius: 12px;
+            padding: 20px;
+            display: none;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .result-box.active {
+            display: block;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .result-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .result-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-family: var(--font-sub);
+        }
+
+        .result-value-badge {
+            background-color: #0E1322;
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 600;
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-copy {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            padding: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s ease;
+        }
+
+        .btn-copy:hover {
+            color: var(--secondary);
+        }
+
+        .btn-use-token {
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--secondary);
+            font-size: 12px;
+            padding: 6px 12px;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: var(--font-main);
+            transition: all 0.2s ease;
+        }
+
+        .btn-use-token:hover {
+            background: var(--secondary);
+            color: #FFFFFF;
+        }
+
+        /* Payment panel styling */
+        .terminal-screen {
+            background-color: #0E1322;
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 160px;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        .terminal-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--text-secondary);
+            position: absolute;
+            top: 16px;
+            right: 16px;
+        }
+
+        .terminal-indicator.active {
+            background-color: var(--success);
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse 1.5s infinite;
+        }
+
+        .terminal-status {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+            letter-spacing: 0.5px;
+            margin-top: 8px;
+        }
+
+        .receipt-box {
+            display: none;
+            width: 100%;
+            animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .receipt-box.active {
+            display: block;
+        }
+
+        .receipt-divider {
+            border-top: 1px dashed var(--border-color);
+            margin: 14px 0;
+        }
+
+        .receipt-success-icon {
+            font-size: 32px;
+            color: var(--success);
+            margin-bottom: 12px;
+        }
+
+        /* Database monitor section */
+        .database-section {
+            grid-column: 1 / -1;
+            margin-top: 20px;
+            margin-bottom: 60px;
+        }
+
+        .database-card {
+            background-color: var(--card-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .db-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .db-title-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .db-icon {
+            color: var(--primary);
+            font-size: 20px;
+        }
+
+        .btn-refresh {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-refresh:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--text-secondary);
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background-color: #0E1322;
+        }
+
+        .vault-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-family: var(--font-sub);
+            font-size: 13px;
+        }
+
+        .vault-table th {
+            background-color: #090D17;
+            color: var(--text-secondary);
+            font-weight: 600;
+            padding: 14px 18px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1.5px solid var(--border-color);
+        }
+
+        .vault-table td {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            vertical-align: middle;
+        }
+
+        .vault-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .vault-table tr:hover td {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .td-token {
+            font-family: var(--font-mono);
+            font-weight: 600;
+            color: var(--secondary);
+        }
+
+        .td-encrypted {
+            font-family: var(--font-mono);
+            max-width: 250px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text-secondary);
+        }
+
+        .td-iv {
+            font-family: var(--font-mono);
+            color: var(--text-secondary);
+        }
+
+        .td-lastfour {
+            font-family: var(--font-mono);
+            font-weight: 600;
+            color: #FFFFFF;
+        }
+
+        .empty-state {
+            padding: 40px 0;
+            text-align: center;
+            color: var(--text-secondary);
+            font-family: var(--font-sub);
+        }
+
+        /* Compliance info block */
+        .compliance-banner {
+            background: linear-gradient(90deg, rgba(79, 70, 229, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-top: 24px;
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .compliance-icon {
+            font-size: 24px;
+            color: var(--primary);
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .compliance-text h4 {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .compliance-text p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        footer {
+            margin-top: auto;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            font-family: var(--font-sub);
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Utility animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.6; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* SVGs for icons */
+        .icon {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+            display: inline-block;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-container">
+            <div class="logo-icon">🛡️</div>
+            <div class="logo-text">
+                <h1>VALKYRIE VAULT</h1>
+                <p>PCI-DSS Credit Card Tokenizer</p>
+            </div>
+        </div>
+        <div class="badge-pci">
+            PCI-DSS COMPLIANT DEMO (REQ 3.4)
+        </div>
+    </header>
+
+    <main>
+        <!-- LEFT COLUMN: TOKENIZATION -->
+        <section class="vault-card">
+            <div class="card-header">
+                <h2 class="card-title">Secured Tokenization Terminal</h2>
+                <p class="card-subtitle">Convert sensitive Primary Account Numbers (PAN) into secure, stateless surrogate tokens.</p>
+            </div>
+
+            <!-- Visual Credit Card Preview -->
+            <div class="credit-card-wrapper">
+                <div class="physical-card" id="creditCardPreview">
+                    <div class="card-top">
+                        <div class="card-chip"></div>
+                        <div class="card-brand-logo" id="cardBrandLogo">VAULT</div>
+                    </div>
+                    <div class="card-middle">
+                        <div class="card-number-display" id="cardNumberDisplay">•••• •••• •••• ••••</div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-holder">
+                            <span class="card-label">Cardholder Name</span>
+                            <span class="card-holder-name">Jane Doe</span>
+                        </div>
+                        <div class="card-expiry">
+                            <span class="card-label">Expires</span>
+                            <span class="card-expiry-val">12/30</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <form id="tokenizeForm" onsubmit="handleTokenize(event)">
+                <div class="form-group">
+                    <label class="form-label" for="cardNumberInput">16-Digit Primary Account Number (PAN)</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="cardNumberInput" class="form-input" placeholder="4111 2222 3333 4444" maxlength="19" autocomplete="off" oninput="formatAndValidateCard(this)">
+                        <div class="input-icon" id="validationIcon"></div>
+                    </div>
+                    
+                    <div class="val-indicator">
+                        <span id="valLen" class="val-check">
+                            <svg class="icon" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l5-5z"/></svg>
+                            13-19 Digits
+                        </span>
+                        <span id="valLuhn" class="val-check">
+                            <svg class="icon" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l5-5z"/></svg>
+                            Luhn Validated
+                        </span>
+                    </div>
+                </div>
+
+                <button type="submit" id="btnTokenize" class="btn" disabled>
+                    <svg class="icon" viewBox="0 0 20 20" style="width:18px;height:18px;"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+                    Generate Surrogate Token
+                </button>
+            </form>
+
+            <!-- Success Panel -->
+            <div id="tokenizeResult" class="result-box">
+                <div class="result-row">
+                    <span class="result-label">Generated Token</span>
+                    <span class="result-value-badge" style="color: var(--secondary); font-size: 14px;">
+                        <span id="resultToken">TKN-XXXXXX</span>
+                        <button class="btn-copy" onclick="copyToken()" title="Copy Token">
+                            <svg class="icon" viewBox="0 0 20 20" style="width: 14px; height: 14px;"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/></svg>
+                        </button>
+                    </span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">Masked Output</span>
+                    <span class="result-value-badge" id="resultMasked">•••• •••• •••• 4444</span>
+                </div>
+                <div class="result-row" style="margin-top: 16px;">
+                    <span class="result-label">Action</span>
+                    <button class="btn-use-token" onclick="loadTokenIntoPayment()">Load into Payment Terminal &rarr;</button>
+                </div>
+            </div>
+
+            <!-- Cryptography specs -->
+            <div class="compliance-banner">
+                <div class="compliance-icon">🔑</div>
+                <div class="compliance-text">
+                    <h4>AES-256-GCM Native Cryptography</h4>
+                    <p>The system runs high-security encryption using native Java <code>javax.crypto.Cipher</code> using GCM mode with NoPadding. Each transaction utilizes a cryptographically strong 12-byte initialization vector (IV) generated by <code>SecureRandom</code>.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- RIGHT COLUMN: AUTHORIZATION -->
+        <section class="vault-card">
+            <div class="card-header">
+                <h2 class="card-title">Authorization Mock Terminal</h2>
+                <p class="card-subtitle">Authorize simulated purchase transactions using stateless surrogate tokens instead of raw card numbers.</p>
+            </div>
+
+            <div class="terminal-screen">
+                <div id="terminalIndicator" class="terminal-indicator"></div>
+                
+                <!-- Display Mock Terminal Status -->
+                <div id="terminalWelcome">
+                    <div style="font-size: 40px; margin-bottom: 12px;">🏪</div>
+                    <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">Point of Sale (POS) Terminal</h3>
+                    <p style="font-size: 12px; color: var(--text-secondary);">Ready for transactions</p>
+                </div>
+
+                <!-- Animated Receipt -->
+                <div id="receiptBox" class="receipt-box">
+                    <div class="receipt-success-icon">✓</div>
+                    <h3 style="font-size: 16px; font-weight: 700; color: var(--success); margin-bottom: 2px;">TRANSACTION APPROVED</h3>
+                    <p style="font-size: 11px; color: var(--text-secondary); font-family: var(--font-mono);" id="receiptTxnId">TXN-D129EA3F1092F</p>
+                    
+                    <div class="receipt-divider"></div>
+                    
+                    <div class="result-row" style="margin-bottom: 8px;">
+                        <span class="result-label">Auth Token</span>
+                        <span style="font-family: var(--font-mono); font-size: 12px; font-weight: 600;" id="receiptTokenVal">TKN-DF3910</span>
+                    </div>
+                    <div class="result-row" style="margin-bottom: 8px;">
+                        <span class="result-label">Purchase Amount</span>
+                        <span style="font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: #FFFFFF;" id="receiptAmountVal">$50.00</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Payment Status</span>
+                        <span class="result-value-badge" style="background-color: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); color: var(--success); font-size: 11px; padding: 2px 8px;">SETTLED</span>
+                    </div>
+                </div>
+            </div>
+
+            <form id="paymentForm" onsubmit="handlePayment(event)">
+                <div class="form-group">
+                    <label class="form-label" for="paymentTokenInput">Surrogate Token</label>
+                    <input type="text" id="paymentTokenInput" class="form-input" placeholder="TKN-XXXXXX" required autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="paymentAmountInput">Transaction Amount ($)</label>
+                    <input type="number" id="paymentAmountInput" class="form-input" placeholder="50.00" value="50.00" min="0.01" step="0.01" required>
+                </div>
+
+                <button type="submit" id="btnPay" class="btn" style="background: linear-gradient(135deg, var(--secondary), var(--primary)); box-shadow: 0 4px 15px var(--secondary-glow);">
+                    <svg class="icon" viewBox="0 0 20 20" style="width:18px;height:18px;"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"/></svg>
+                    Authorize Mock Payment
+                </button>
+            </form>
+
+            <div class="compliance-banner">
+                <div class="compliance-icon">🛡️</div>
+                <div class="compliance-text">
+                    <h4>In-Memory Safe Decryption</h4>
+                    <p>When the payment API is triggered, the vault fetches the encrypted record, decrypts the card number in memory, processes authorization, and immediately discards the cleartext PAN. Cleartext data never touches disk storage.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- FULL WIDTH: DATABASE INSPECTOR -->
+        <section class="database-section">
+            <div class="database-card">
+                <div class="db-header">
+                    <div class="db-title-container">
+                        <span class="db-icon">🗄️</span>
+                        <div>
+                            <h3 class="card-title">Token Database Inspector (H2 Engine)</h3>
+                            <p class="card-subtitle" style="margin-bottom:0;">Live compliance debugger displaying actual data rows stored in the relational schema.</p>
+                        </div>
+                    </div>
+                    <button class="btn-refresh" onclick="fetchVaultDatabase()">
+                        <svg class="icon" viewBox="0 0 20 20" style="width:14px;height:14px;"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>
+                        Sync Table
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="vault-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px;">ID</th>
+                                <th style="width: 150px;">Surrogate Token</th>
+                                <th>Encrypted PAN (Base64 Ciphertext)</th>
+                                <th style="width: 180px;">Initialization Vector (IV)</th>
+                                <th style="width: 120px;">Last 4 Digits</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dbTableBody">
+                            <tr>
+                                <td colspan="5" class="empty-state">
+                                    No tokens stored yet. Submit the form above to add an entry!
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="compliance-banner" style="background: rgba(16, 185, 129, 0.04); border-color: rgba(16, 185, 129, 0.15);">
+                    <div class="compliance-icon" style="color: var(--success);">✓</div>
+                    <div class="compliance-text">
+                        <h4 style="color: var(--success);">Compliance Check: PCI-DSS Requirement 3.4</h4>
+                        <p>Standard 3.4 mandates rendering primary account numbers unreadable anywhere they are stored. Notice that the database inspector only contains unique surrogate tokens and encrypted blobs. The true credit card PAN is protected by AES-256-GCM encryption.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        Valkyrie Token Vault Simulator &bull; Standard Compliant Implementation &bull; Spring Boot 3 &amp; Java 21
+    </footer>
+
+    <script>
+        // State variables
+        let generatedTokenVal = "";
+        let generatedLastFourVal = "";
+
+        // Formats and validates card inputs dynamically
+        function formatAndValidateCard(input) {
+            // Remove non-digit characters
+            let val = input.value.replace(/\D/g, '');
+            
+            // Format card number with spaces every 4 characters
+            let formatted = '';
+            for (let i = 0; i < val.length; i++) {
+                if (i > 0 && i % 4 === 0) {
+                    formatted += ' ';
+                }
+                formatted += val[i];
+            }
+            input.value = formatted;
+
+            // Raw digits for validation
+            const rawDigits = val;
+
+            // Check card length (13 to 19 digits)
+            const isLengthValid = rawDigits.length >= 13 && rawDigits.length <= 19;
+            const lenElement = document.getElementById('valLen');
+            if (rawDigits.length > 0) {
+                lenElement.className = isLengthValid ? 'val-check valid' : 'val-check invalid';
+            } else {
+                lenElement.className = 'val-check';
+            }
+
+            // Check Luhn algorithm
+            const isLuhnValid = luhnCheck(rawDigits);
+            const luhnElement = document.getElementById('valLuhn');
+            if (rawDigits.length >= 13) {
+                luhnElement.className = isLuhnValid ? 'val-check valid' : 'val-check invalid';
+            } else {
+                luhnElement.className = 'val-check';
+            }
+
+            // Update Card Preview number
+            const previewNum = document.getElementById('cardNumberDisplay');
+            if (rawDigits.length > 0) {
+                // Pad or build mask
+                let displayStr = '';
+                for (let i = 0; i < 16; i++) {
+                    if (i > 0 && i % 4 === 0) displayStr += ' ';
+                    if (i < rawDigits.length) {
+                        displayStr += rawDigits[i];
+                    } else {
+                        displayStr += '•';
+                    }
+                }
+                previewNum.innerText = displayStr;
+            } else {
+                previewNum.innerText = '•••• •••• •••• ••••';
+            }
+
+            // Brand detection
+            detectBrand(rawDigits);
+
+            // Enable / Disable button
+            const btnTokenize = document.getElementById('btnTokenize');
+            btnTokenize.disabled = !(isLengthValid && isLuhnValid);
+        }
+
+        // Luhn Validation
+        function luhnCheck(num) {
+            if (!num || num.length < 13) return false;
+            let sum = 0;
+            let alternate = false;
+            for (let i = num.length - 1; i >= 0; i--) {
+                let n = parseInt(num[i], 10);
+                if (alternate) {
+                    n *= 2;
+                    if (n > 9) {
+                        n = (n % 10) + 1;
+                    }
+                }
+                sum += n;
+                alternate = !alternate;
+            }
+            return (sum % 10 === 0);
+        }
+
+        // Simple Card Brand Detector
+        function detectBrand(num) {
+            const logo = document.getElementById('cardBrandLogo');
+            logo.className = 'card-brand-logo'; // Reset
+            
+            if (num.startsWith('4')) {
+                logo.innerText = 'Visa';
+                logo.classList.add('visa');
+            } else if (num.startsWith('5')) {
+                logo.innerText = '';
+                logo.classList.add('mastercard');
+            } else if (num.startsWith('34') || num.startsWith('37')) {
+                logo.innerText = 'Amex';
+                logo.style.color = '#38BDF8';
+            } else if (num.startsWith('6')) {
+                logo.innerText = 'Discover';
+                logo.style.color = '#F97316';
+            } else {
+                logo.innerText = 'VAULT';
+                logo.style.color = '#FFFFFF';
+            }
+        }
+
+        // API Calls: Tokenize card
+        async function handleTokenize(event) {
+            event.preventDefault();
+            const cardInput = document.getElementById('cardNumberInput');
+            const cardRaw = cardInput.value.replace(/\s|-/g, '');
+            const btn = document.getElementById('btnTokenize');
+
+            // Visual loading state
+            btn.disabled = true;
+            btn.innerHTML = 'Tokenizing PAN...';
+
+            try {
+                const response = await fetch('/api/v1/vault/tokenize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ cardNumber: cardRaw })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    generatedTokenVal = data.token;
+                    generatedLastFourVal = data.lastFour;
+
+                    // Update UI results
+                    document.getElementById('resultToken').innerText = data.token;
+                    document.getElementById('resultMasked').innerText = `•••• •••• •••• ${data.lastFour}`;
+                    document.getElementById('tokenizeResult').classList.add('active');
+
+                    // Animate Physical Card preview
+                    const physicalCard = document.getElementById('creditCardPreview');
+                    physicalCard.classList.add('tokenized');
+                    document.getElementById('cardNumberDisplay').innerText = `TOKENIZED: ${data.token}`;
+
+                    // Refresh table
+                    fetchVaultDatabase();
+                } else {
+                    alert('Error: ' + (data.error || 'Tokenization failed'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Connection failure: Check if backend server is running');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `
+                    <svg class="icon" viewBox="0 0 20 20" style="width:18px;height:18px;"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+                    Generate Surrogate Token
+                `;
+            }
+        }
+
+        // Copy generated token helper
+        function copyToken() {
+            navigator.clipboard.writeText(generatedTokenVal);
+            const copyBtn = document.querySelector('.btn-copy');
+            copyBtn.innerHTML = '<span style="color: var(--success); font-size: 11px; font-family: var(--font-main);">Copied!</span>';
+            setTimeout(() => {
+                copyBtn.innerHTML = '<svg class="icon" viewBox="0 0 20 20" style="width: 14px; height: 14px;"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/></svg>';
+            }, 2000);
+        }
+
+        // Load token into mock payment form automatically
+        function loadTokenIntoPayment() {
+            document.getElementById('paymentTokenInput').value = generatedTokenVal;
+            document.getElementById('paymentAmountInput').focus();
+            // Scroll smoothly to terminal form
+            document.getElementById('paymentForm').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // API Calls: Payment using token
+        async function handlePayment(event) {
+            event.preventDefault();
+            const tokenInput = document.getElementById('paymentTokenInput').value.trim();
+            const amountInput = document.getElementById('paymentAmountInput').value;
+            const btn = document.getElementById('btnPay');
+            
+            const indicator = document.getElementById('terminalIndicator');
+            const welcome = document.getElementById('terminalWelcome');
+            const receipt = document.getElementById('receiptBox');
+
+            // Reset states
+            receipt.classList.remove('active');
+            welcome.style.display = 'block';
+            indicator.className = 'terminal-indicator active';
+            btn.disabled = true;
+            btn.innerHTML = 'Processing Authorization...';
+
+            try {
+                const response = await fetch('/api/v1/vault/pay', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        token: tokenInput,
+                        amount: parseFloat(amountInput)
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Update Receipt visual details
+                    document.getElementById('receiptTxnId').innerText = data.transactionId;
+                    document.getElementById('receiptTokenVal').innerText = tokenInput;
+                    document.getElementById('receiptAmountVal').innerText = `$${parseFloat(amountInput).toFixed(2)}`;
+
+                    // Switch screen inside terminal
+                    setTimeout(() => {
+                        welcome.style.display = 'none';
+                        receipt.classList.add('active');
+                        indicator.className = 'terminal-indicator';
+                    }, 800);
+                } else {
+                    indicator.className = 'terminal-indicator';
+                    alert('Error: ' + (data.error || 'Payment failed'));
+                }
+            } catch (err) {
+                console.error(err);
+                indicator.className = 'terminal-indicator';
+                alert('Connection failure: Check backend API connectivity');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `
+                    <svg class="icon" viewBox="0 0 20 20" style="width:18px;height:18px;"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"/></svg>
+                    Authorize Mock Payment
+                `;
+            }
+        }
+
+        // Fetch H2 stored tokens to display
+        async function fetchVaultDatabase() {
+            const tableBody = document.getElementById('dbTableBody');
+            
+            try {
+                const response = await fetch('/api/v1/vault/tokens');
+                if (!response.ok) throw new Error('Database synch error');
+                
+                const data = await response.json();
+
+                if (data.length === 0) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="empty-state">
+                                No tokens stored yet. Submit the form above to add an entry!
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tableBody.innerHTML = '';
+                data.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${row.id}</td>
+                        <td class="td-token">${row.token}</td>
+                        <td class="td-encrypted" title="${row.encryptedPan}">${row.encryptedPan}</td>
+                        <td class="td-iv">${row.iv}</td>
+                        <td class="td-lastfour">•••• •••• •••• ${row.lastFour}</td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error(err);
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state" style="color: var(--danger);">
+                            Failed to synchronise with H2 database. Check connection.
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Initial setup on window load
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchVaultDatabase();
+        });
+    </script>
+</body>
+</html>
